@@ -20,21 +20,22 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
     # Window Configuration
     self.setTitle("Work in progress")
-    self.geometry("750x1000")
+    self.geometry("750x1050")
     self.resizable(False, False)
 
-    # File paths storage (1 main file + 6 support files)
+    # File paths storage (1 main file + 7 support files)
     self.marketing_file = None
-    self.support_files = [None] * 6
+    self.support_files = [None] * 7
 
-    # Labels for the 6 specific support files (t-2 first, then t-1)
+    # Base support file labels (t-2 and t-1 will be updated dynamically based on input)
     self.support_file_labels = [
-        "AD (t-2) - Layout",
-        "AD (t-1) - Layout",
+        "AD (Macro - 2) - Layout",
+        "AD (Macro - 1) - Layout",
         "Made in Canada",
         "SKURank",
         "Mccormick, Kraft, Nestle",
         "HQ",
+        "TGP PS & Made in Report",
     ]
 
     self.create_widgets()
@@ -53,9 +54,36 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
     # Scrollable frame for cleaner layout
     main_frame = ctk.CTkScrollableFrame(
-        self, width=700, height=820, fg_color="transparent"
+        self, width=700, height=860, fg_color="transparent"
     )
     main_frame.pack(fill="both", expand=True, padx=20, pady=10)
+
+    # 0. Marketing Macro # Input Section
+    input_frame = ctk.CTkFrame(
+        main_frame, fg_color="#2b2b2b", corner_radius=8, height=60
+    )
+    input_frame.pack(fill="x", pady=6)
+    input_frame.pack_propagate(False)
+
+    macro_label = ctk.CTkLabel(
+        input_frame,
+        text="Marketing Macro #",
+        font=ctk.CTkFont(size=14, weight="bold"),
+    )
+    macro_label.pack(side="left", padx=15)
+
+    self.macro_entry = ctk.CTkEntry(
+        input_frame,
+        placeholder_text="e.g. 2024 or 10",
+        width=200,
+        height=32,
+        font=ctk.CTkFont(size=13),
+    )
+    self.macro_entry.pack(side="right", padx=15)
+
+    # Separator
+    sep1 = ctk.CTkFrame(main_frame, height=2, fg_color="#333333")
+    sep1.pack(fill="x", pady=15)
 
     # 1. Big Upload Area (Marketing Macro)
     self.create_upload_section(
@@ -72,13 +100,13 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     # Section label for support files
     support_label = ctk.CTkLabel(
         main_frame,
-        text="Support Files (6 Required)",
+        text="Support Files (7 Required)",
         font=ctk.CTkFont(size=16, weight="bold"),
     )
     support_label.pack(anchor="w", pady=(0, 5))
 
-    # 2. Six Smaller Upload Areas for specific support files
-    for i in range(6):
+    # 2. Seven Smaller Upload Areas for specific support files
+    for i in range(7):
       self.create_upload_section(
           parent=main_frame,
           title_text=f"Upload your {self.support_file_labels[i]} file",
@@ -166,9 +194,9 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
   def validate_support_filename(self, index, filename):
     fn_lower = filename.lower()
 
-    if index == 0:  # AD (t-2) - Layout -> No naming check
+    if index == 0:  # AD (Macro - 2) - Layout -> No naming check
       return True
-    elif index == 1:  # AD (t-1) - Layout -> No naming check
+    elif index == 1:  # AD (Macro - 1) - Layout -> No naming check
       return True
     elif index == 2:  # Made in Canada
       return "made in canada" in fn_lower
@@ -178,6 +206,8 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       return "mccormick" in fn_lower
     elif index == 5:  # HQ
       return "hq" in fn_lower
+    elif index == 6:  # TGP PS & Made in Report
+      return "tgp ps" in fn_lower or "made in report" in fn_lower
     return True
 
   def process_file_path(self, file_path, is_big, index, status_label):
@@ -212,6 +242,7 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
             "SKURank",
             "Mccormick, Kraft, Nestle",
             "HQ",
+            "TGP PS & Made in Report",
         ]
         messagebox.showerror(
             "Invalid File Name",
@@ -249,6 +280,24 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       self.process_file_path(files[0], is_big, index, status_label)
 
   def on_generate_click(self):
+    # Validation check for Marketing Macro # input
+    macro_input = self.macro_entry.get().strip()
+    if not macro_input:
+      messagebox.showwarning(
+          "Missing Input",
+          "Please enter a value for 'Marketing Macro #'.",
+      )
+      return
+
+    try:
+      macro_num = int(macro_input)
+    except ValueError:
+      messagebox.showerror(
+          "Invalid Input",
+          "'Marketing Macro #' must be a valid integer number.",
+      )
+      return
+
     # Validation check for main file
     if not self.marketing_file:
       messagebox.showwarning(
@@ -257,7 +306,7 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       )
       return
 
-    # Validation check for all 6 support files
+    # Validation check for all 7 support files
     for i, file in enumerate(self.support_files):
       if not file:
         messagebox.showwarning(
@@ -276,22 +325,33 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     self.update()
 
     # Run processing after a brief delay so the spinner animation initiates
-    self.after(150, self.execute_generation)
+    self.after(150, lambda: self.execute_generation(macro_num))
 
-  def execute_generation(self):
+  def execute_generation(self, macro_num):
     excel_app = None
     try:
-      # Initialize Excel in the background (visible=False)
+      # Initialize Excel completely in the background (visible=False)
       excel_app = xw.App(visible=False)
-      wb_macro = xw.Book(self.marketing_file)
+      excel_app.screen_updating = False
+      excel_app.display_alerts = False
 
-      # Call individual handler methods in order (Index 0 is t-2, Index 1 is t-1)
-      self.handle_ad_t2_layout(wb_macro, self.support_files[0])
-      self.handle_ad_t1_layout(wb_macro, self.support_files[1])
-      self.handle_made_in_canada(wb_macro, self.support_files[2])
-      self.handle_sku_rank(wb_macro, self.support_files[3])
-      self.handle_mccormick_kraft_nestle(wb_macro, self.support_files[4])
-      self.handle_hq(wb_macro, self.support_files[5])
+      # Open main workbook inside the background app
+      wb_macro = excel_app.books.open(self.marketing_file)
+
+      # Calculate dynamic header numbers (-2 and -1)
+      val_t2 = macro_num - 2
+      val_t1 = macro_num - 1
+
+      # Call individual handler methods in order (passing excel_app)
+      self.handle_ad_t2_layout(excel_app, wb_macro, self.support_files[0], val_t2)
+      self.handle_ad_t1_layout(excel_app, wb_macro, self.support_files[1], val_t1)
+      self.handle_made_in_canada(excel_app, wb_macro, self.support_files[2])
+      self.handle_sku_rank(excel_app, wb_macro, self.support_files[3])
+      self.handle_mccormick_kraft_nestle(
+          excel_app, wb_macro, self.support_files[4]
+      )
+      self.handle_hq(excel_app, wb_macro, self.support_files[5])
+      self.handle_tgp_ps_report(excel_app, wb_macro, self.support_files[6])
 
       # Prompt user where to save their new marketing macro file
       save_path = filedialog.asksaveasfilename(
@@ -318,7 +378,10 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     finally:
       # Cleanly close background Excel app instance if opened
       if excel_app:
-        excel_app.quit()
+        try:
+          excel_app.quit()
+        except:
+          pass
 
       # Reset UI state (stop spinner, clear loading label, re-enable button)
       self.progress_bar.stop()
@@ -330,15 +393,12 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
   # Support File Handler Methods
   # ==========================================
 
-  def handle_ad_t2_layout(self, wb_macro, file_path):
-    wb_support = xw.Book(file_path)
-
+  def handle_ad_t2_layout(self, excel_app, wb_macro, file_path, header_val):
+    wb_support = excel_app.books.open(file_path)
     sheet_macro = wb_macro.sheets["Sheet1"]
     sheet_support = wb_support.sheets[0]
 
-    # Set header row in column BQ for t-2
-    sheet_macro.range("BQ2").value = "t-2"
-
+    sheet_macro.range("BQ2").value = header_val
     last_row = sheet_macro.range(
         "A" + str(sheet_macro.cells.last_cell.row)
     ).end("up").row
@@ -346,21 +406,17 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     if last_row >= 3:
       support_name = os.path.basename(file_path)
       support_sheet_name = sheet_support.name
-
       formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
       sheet_macro.range(f"BQ3:BQ{last_row}").formula = formula
 
     wb_support.close()
 
-  def handle_ad_t1_layout(self, wb_macro, file_path):
-    wb_support = xw.Book(file_path)
-
+  def handle_ad_t1_layout(self, excel_app, wb_macro, file_path, header_val):
+    wb_support = excel_app.books.open(file_path)
     sheet_macro = wb_macro.sheets["Sheet1"]
     sheet_support = wb_support.sheets[0]
 
-    # Set header row in column BR for t-1
-    sheet_macro.range("BR2").value = "t-1"
-
+    sheet_macro.range("BR2").value = header_val
     last_row = sheet_macro.range(
         "A" + str(sheet_macro.cells.last_cell.row)
     ).end("up").row
@@ -368,20 +424,17 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     if last_row >= 3:
       support_name = os.path.basename(file_path)
       support_sheet_name = sheet_support.name
-
       formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
       sheet_macro.range(f"BR3:BR{last_row}").formula = formula
 
     wb_support.close()
 
-  def handle_made_in_canada(self, wb_macro, file_path):
-    wb_support = xw.Book(file_path)
-
+  def handle_made_in_canada(self, excel_app, wb_macro, file_path):
+    wb_support = excel_app.books.open(file_path)
     sheet_macro = wb_macro.sheets["Sheet1"]
     sheet_support = wb_support.sheets[0]
 
     sheet_macro.range("BP2").value = "Canada"
-
     last_row = sheet_macro.range(
         "A" + str(sheet_macro.cells.last_cell.row)
     ).end("up").row
@@ -389,22 +442,18 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     if last_row >= 3:
       support_name = os.path.basename(file_path)
       support_sheet_name = sheet_support.name
-
       formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
       sheet_macro.range(f"BP3:BP{last_row}").formula = formula
 
     wb_support.close()
 
-  def handle_sku_rank(self, wb_macro, file_path):
-    wb_support = xw.Book(file_path)
-
+  def handle_sku_rank(self, excel_app, wb_macro, file_path):
+    wb_support = excel_app.books.open(file_path)
     sheet_macro = wb_macro.sheets["Sheet1"]
     sheet_support = wb_support.sheets[0]
 
-    # Set headers for BS ("SNS") and BT ("$")
     sheet_macro.range("BS2").value = "SNS"
     sheet_macro.range("BT2").value = "$"
-
     last_row = sheet_macro.range(
         "A" + str(sheet_macro.cells.last_cell.row)
     ).end("up").row
@@ -413,28 +462,75 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       support_name = os.path.basename(file_path)
       support_sheet_name = sheet_support.name
 
-      # Column BS (SNS) -> VLOOKUP returning column index 24
       formula_bs = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$Z, 24, 0)"
       sheet_macro.range(f"BS3:BS{last_row}").formula = formula_bs
 
-      # Column BT ($) -> VLOOKUP returning column index 15
       formula_bt = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$Z, 15, 0)"
       bt_range = sheet_macro.range(f"BT3:BT{last_row}")
       bt_range.formula = formula_bt
-
-      # Format BT as currency with 2 decimal places
       bt_range.number_format = '"$"#,##0.00'
 
     wb_support.close()
 
-  def handle_mccormick_kraft_nestle(self, wb_macro, file_path):
-    wb_support = xw.Book(file_path)
-    # TODO: Add your xlwings logic for McCormick, Kraft, Nestle here
+  def handle_mccormick_kraft_nestle(self, excel_app, wb_macro, file_path):
+    wb_support = excel_app.books.open(file_path)
+    sheet_macro = wb_macro.sheets["Sheet1"]
+
+    sheet_macro.range("BU2").value = "Kraft"
+    sheet_macro.range("BV2").value = "Nestle"
+    sheet_macro.range("BW2").value = "McCormick"
+    last_row = sheet_macro.range(
+        "A" + str(sheet_macro.cells.last_cell.row)
+    ).end("up").row
+
+    if last_row >= 3:
+      support_name = os.path.basename(file_path)
+
+      formula_kraft = f"=VLOOKUP(A3, '[{support_name}]Kraft'!$A:$B, 1, 0)"
+      sheet_macro.range(f"BU3:BU{last_row}").formula = formula_kraft
+
+      formula_nestle = f"=VLOOKUP(A3, '[{support_name}]Nestle'!$A:$B, 1, 0)"
+      sheet_macro.range(f"BV3:BV{last_row}").formula = formula_nestle
+
+      formula_mccormick = f"=VLOOKUP(A3, '[{support_name}]McCormick'!$A:$B, 1, 0)"
+      sheet_macro.range(f"BW3:BW{last_row}").formula = formula_mccormick
+
     wb_support.close()
 
-  def handle_hq(self, wb_macro, file_path):
-    wb_support = xw.Book(file_path)
-    # TODO: Add your xlwings logic for HQ CSV here
+  def handle_hq(self, excel_app, wb_macro, file_path):
+    wb_support = excel_app.books.open(file_path)
+    sheet_macro = wb_macro.sheets["Sheet1"]
+    sheet_support = wb_support.sheets[0]
+
+    sheet_macro.range("BY2").value = "HQ"
+    last_row = sheet_macro.range(
+        "A" + str(sheet_macro.cells.last_cell.row)
+    ).end("up").row
+
+    if last_row >= 3:
+      support_name = os.path.basename(file_path)
+      support_sheet_name = sheet_support.name
+      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$B:$I, 6, 0)"
+      sheet_macro.range(f"BY3:BY{last_row}").formula = formula
+
+    wb_support.close()
+
+  def handle_tgp_ps_report(self, excel_app, wb_macro, file_path):
+    wb_support = excel_app.books.open(file_path)
+    sheet_macro = wb_macro.sheets["Sheet1"]
+    sheet_support = wb_support.sheets[0]
+
+    sheet_macro.range("BZ2").value = "HO"
+    last_row = sheet_macro.range(
+        "A" + str(sheet_macro.cells.last_cell.row)
+    ).end("up").row
+
+    if last_row >= 3:
+      support_name = os.path.basename(file_path)
+      support_sheet_name = sheet_support.name
+      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$Z, 4, 0)"
+      sheet_macro.range(f"BZ3:BZ{last_row}").formula = formula
+
     wb_support.close()
 
 
