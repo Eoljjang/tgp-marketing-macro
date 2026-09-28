@@ -31,7 +31,7 @@ class MarketingMacroApp(ctk.CTk):
     # Main Title Label
     title_label = ctk.CTkLabel(
         self,
-        text="Work in Progress",
+        text="Marketing Macro Generator",
         font=ctk.CTkFont(size=24, weight="bold"),
     )
     title_label.pack(pady=(20, 10))
@@ -127,15 +127,15 @@ class MarketingMacroApp(ctk.CTk):
   def browse_file(self, is_big, index, status_label):
     file_path = filedialog.askopenfilename(
         title="Select Excel File",
-        filetypes=[("Excel Files", "*.xlsx *.xls"), ("All Files", "*.*")],
+        filetypes=[("Excel Files", "*.xlsx *.xls *.xlsm"), ("All Files", "*.*")],
     )
 
     if file_path:
       # Validate extension
-      if not file_path.lower().endswith((".xlsx", ".xls")):
+      if not file_path.lower().endswith((".xlsx", ".xls", ".xlsm")):
         messagebox.showerror(
             "Invalid File Type",
-            "Please select a valid Excel file (.xlsx or .xls).",
+            "Please select a valid Excel file (.xlsx, .xls, or .xlsm).",
         )
         return
 
