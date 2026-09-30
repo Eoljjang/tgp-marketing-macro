@@ -32,7 +32,7 @@ jobs:
 
     - name: Build Standalone EXE with PyInstaller
       run: |
-        pyinstaller --noconsole --onefile --name "Marketing Macro Generator" app.py
+        pyinstaller --noconsole --onefile --name "Marketing Macro Generator" main.py
 
     - name: Generate Automatic Release Tag
       id: tag

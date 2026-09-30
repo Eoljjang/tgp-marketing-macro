@@ -4,12 +4,13 @@ import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import xlwings as xw
 
+from excel_processor import MarketingMacroProcessor
+
 # Set up CustomTkinter appearance
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
 
-# Inherit from TkinterDnD.Tk to enable native drag-and-drop hooks
 class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
   def __init__(self):
@@ -19,7 +20,7 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     self.TkdndVersion = TkinterDnD._require(self)
 
     # Window Configuration
-    self.setTitle("Work in progress")
+    self.title("Work in progress")
     self.geometry("750x1050")
     self.resizable(False, False)
 
@@ -27,10 +28,10 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     self.marketing_file = None
     self.support_files = [None] * 7
 
-    # Base support file labels (t-2 and t-1 will be updated dynamically based on input)
+    # Base support file labels
     self.support_file_labels = [
-        "AD (Macro - 2) - Layout",
-        "AD (Macro - 1) - Layout",
+        "AD (Macro # - 2) - Layout",
+        "AD (Macro # - 1) - Layout",
         "Made in Canada",
         "SKURank",
         "Mccormick, Kraft, Nestle",
@@ -39,9 +40,6 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     ]
 
     self.create_widgets()
-
-  def setTitle(self, title):
-    self.title(title)
 
   def create_widgets(self):
     # Main Title Label
@@ -74,7 +72,7 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
     self.macro_entry = ctk.CTkEntry(
         input_frame,
-        placeholder_text="e.g. 2024 or 10",
+        placeholder_text="e.g. 15 or 20",
         width=200,
         height=32,
         font=ctk.CTkFont(size=13),
@@ -173,40 +171,26 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     upload_btn.pack(side="right", padx=5)
 
     # Register drop target for drag-and-drop capability using tkinterdnd2
-    frame.drop_target_register(DND_FILES)
-    frame.dnd_bind(
-        '<<Drop>>',
-        lambda e: self.handle_drop(e.data, is_big, index, status_label),
-    )
-
-    label.drop_target_register(DND_FILES)
-    label.dnd_bind(
-        '<<Drop>>',
-        lambda e: self.handle_drop(e.data, is_big, index, status_label),
-    )
-
-    status_label.drop_target_register(DND_FILES)
-    status_label.dnd_bind(
-        '<<Drop>>',
-        lambda e: self.handle_drop(e.data, is_big, index, status_label),
-    )
+    for widget in (frame, label, status_label):
+      widget.drop_target_register(DND_FILES)
+      widget.dnd_bind(
+          "<<Drop>>",
+          lambda e: self.handle_drop(e.data, is_big, index, status_label),
+      )
 
   def validate_support_filename(self, index, filename):
     fn_lower = filename.lower()
-
-    if index == 0:  # AD (Macro - 2) - Layout -> No naming check
+    if index in (0, 1):
       return True
-    elif index == 1:  # AD (Macro - 1) - Layout -> No naming check
-      return True
-    elif index == 2:  # Made in Canada
+    elif index == 2:
       return "made in canada" in fn_lower
-    elif index == 3:  # SKURank
+    elif index == 3:
       return "skurank" in fn_lower
-    elif index == 4:  # Mccormick, Kraft, Nestle
+    elif index == 4:
       return "mccormick" in fn_lower
-    elif index == 5:  # HQ
+    elif index == 5:
       return "hq" in fn_lower
-    elif index == 6:  # TGP PS & Made in Report
+    elif index == 6:
       return "tgp ps" in fn_lower or "made in report" in fn_lower
     return True
 
@@ -219,10 +203,11 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       )
       return
 
-    if not is_big and index == 5:
-      allowed_exts = (".xlsx", ".xls", ".xlsm", ".csv")
-    else:
-      allowed_exts = (".xlsx", ".xls", ".xlsm")
+    allowed_exts = (
+        (".xlsx", ".xls", ".xlsm", ".csv")
+        if (not is_big and index == 5)
+        else (".xlsx", ".xls", ".xlsm")
+    )
 
     if not file_path.lower().endswith(allowed_exts):
       messagebox.showerror(
@@ -233,24 +218,23 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
     file_name = os.path.basename(file_path)
 
-    if not is_big:
-      if not self.validate_support_filename(index, file_name):
-        expected_patterns = [
-            "",
-            "",
-            "Made in Canada",
-            "SKURank",
-            "Mccormick, Kraft, Nestle",
-            "HQ",
-            "TGP PS & Made in Report",
-        ]
-        messagebox.showerror(
-            "Invalid File Name",
-            f"The selected file does not match the required naming convention for "
-            f"'{self.support_file_labels[index]}'.\n\nFilename must contain: "
-            f"'{expected_patterns[index]}'.",
-        )
-        return
+    if not is_big and not self.validate_support_filename(index, file_name):
+      expected_patterns = [
+          "",
+          "",
+          "Made in Canada",
+          "SKURank",
+          "Mccormick, Kraft, Nestle",
+          "HQ",
+          "TGP PS & Made in Report",
+      ]
+      messagebox.showerror(
+          "Invalid File Name",
+          f"The selected file does not match the required naming convention for"
+          f" '{self.support_file_labels[index]}'.\n\nFilename must contain:"
+          f" '{expected_patterns[index]}'.",
+      )
+      return
 
     status_label.configure(text=file_name, text_color="#2ecc71")
 
@@ -260,13 +244,14 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       self.support_files[index] = file_path
 
   def browse_file(self, is_big, index, status_label):
-    if not is_big and index == 5:
-      filetypes = [
-          ("Excel & CSV Files", "*.xlsx *.xls *.xlsm *.csv"),
-          ("All Files", "*.*"),
-      ]
-    else:
-      filetypes = [("Excel Files", "*.xlsx *.xls *.xlsm"), ("All Files", "*.*")]
+    filetypes = (
+        [
+            ("Excel & CSV Files", "*.xlsx *.xls *.xlsm *.csv"),
+            ("All Files", "*.*"),
+        ]
+        if (not is_big and index == 5)
+        else [("Excel Files", "*.xlsx *.xls *.xlsm"), ("All Files", "*.*")]
+    )
 
     file_path = filedialog.askopenfilename(
         title="Select Support File", filetypes=filetypes
@@ -280,12 +265,10 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       self.process_file_path(files[0], is_big, index, status_label)
 
   def on_generate_click(self):
-    # Validation check for Marketing Macro # input
     macro_input = self.macro_entry.get().strip()
     if not macro_input:
       messagebox.showwarning(
-          "Missing Input",
-          "Please enter a value for 'Marketing Macro #'.",
+          "Missing Input", "Please enter a value for 'Marketing Macro #'."
       )
       return
 
@@ -293,67 +276,47 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
       macro_num = int(macro_input)
     except ValueError:
       messagebox.showerror(
-          "Invalid Input",
-          "'Marketing Macro #' must be a valid integer number.",
+          "Invalid Input", "'Marketing Macro #' must be a valid integer number."
       )
       return
 
-    # Validation check for main file
     if not self.marketing_file:
       messagebox.showwarning(
-          "Missing File",
-          "Please upload the Marketing Macro file with Extract.",
+          "Missing File", "Please upload the Marketing Macro file with Extract."
       )
       return
 
-    # Validation check for all 7 support files
     for i, file in enumerate(self.support_files):
       if not file:
         messagebox.showwarning(
             "Missing Files",
-            f"Please upload all support files. Missing: '{self.support_file_labels[i]}'",
+            f"Please upload all support files. Missing:"
+            f" '{self.support_file_labels[i]}'",
         )
         return
 
-    # Gray out button, display loading text and start spinner
     self.generate_btn.configure(state="disabled", fg_color="gray")
     self.loading_label.configure(text="Generating please wait...")
     self.progress_bar.pack(pady=5)
     self.progress_bar.start()
-
-    # Force UI update to render loading state before heavy Excel operations run
     self.update()
 
-    # Run processing after a brief delay so the spinner animation initiates
     self.after(150, lambda: self.execute_generation(macro_num))
 
   def execute_generation(self, macro_num):
     excel_app = None
     try:
-      # Initialize Excel completely in the background (visible=False)
       excel_app = xw.App(visible=False)
       excel_app.screen_updating = False
       excel_app.display_alerts = False
 
-      # Open main workbook inside the background app
       wb_macro = excel_app.books.open(self.marketing_file)
 
-      # Calculate dynamic header numbers (-2 and -1)
-      val_t2 = macro_num - 2
-      val_t1 = macro_num - 1
-
-      # Call individual handler methods in order (passing excel_app)
-      self.handle_ad_t2_layout(excel_app, wb_macro, self.support_files[0], val_t2)
-      self.handle_ad_t1_layout(excel_app, wb_macro, self.support_files[1], val_t1)
-      self.handle_made_in_canada(excel_app, wb_macro, self.support_files[2])
-      self.handle_sku_rank(excel_app, wb_macro, self.support_files[3])
-      self.handle_mccormick_kraft_nestle(
-          excel_app, wb_macro, self.support_files[4]
+      # Offload Excel manipulation logic to the separate module
+      MarketingMacroProcessor.process_all(
+          excel_app, wb_macro, self.support_files, macro_num
       )
-      self.handle_hq(excel_app, wb_macro, self.support_files[5])
-      self.handle_tgp_ps_report(excel_app, wb_macro, self.support_files[6])
 
-      # Prompt user where to save their new marketing macro file
       save_path = filedialog.asksaveasfilename(
           defaultextension=".xlsx",
           filetypes=[("Excel files", "*.xlsx"), ("All files", "*.*")],
@@ -376,164 +339,13 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
           "Excel Processing Error", f"An error occurred with xlwings: {str(e)}"
       )
     finally:
-      # Cleanly close background Excel app instance if opened
       if excel_app:
         try:
           excel_app.quit()
         except:
           pass
 
-      # Reset UI state (stop spinner, clear loading label, re-enable button)
       self.progress_bar.stop()
       self.progress_bar.pack_forget()
       self.loading_label.configure(text="")
       self.generate_btn.configure(state="normal", fg_color="#1f6aa5")
-
-  # ==========================================
-  # Support File Handler Methods
-  # ==========================================
-
-  def handle_ad_t2_layout(self, excel_app, wb_macro, file_path, header_val):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-    sheet_support = wb_support.sheets[0]
-
-    sheet_macro.range("BQ2").value = header_val
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-      support_sheet_name = sheet_support.name
-      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
-      sheet_macro.range(f"BQ3:BQ{last_row}").formula = formula
-
-    wb_support.close()
-
-  def handle_ad_t1_layout(self, excel_app, wb_macro, file_path, header_val):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-    sheet_support = wb_support.sheets[0]
-
-    sheet_macro.range("BR2").value = header_val
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-      support_sheet_name = sheet_support.name
-      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
-      sheet_macro.range(f"BR3:BR{last_row}").formula = formula
-
-    wb_support.close()
-
-  def handle_made_in_canada(self, excel_app, wb_macro, file_path):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-    sheet_support = wb_support.sheets[0]
-
-    sheet_macro.range("BP2").value = "Canada"
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-      support_sheet_name = sheet_support.name
-      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
-      sheet_macro.range(f"BP3:BP{last_row}").formula = formula
-
-    wb_support.close()
-
-  def handle_sku_rank(self, excel_app, wb_macro, file_path):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-    sheet_support = wb_support.sheets[0]
-
-    sheet_macro.range("BS2").value = "SNS"
-    sheet_macro.range("BT2").value = "$"
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-      support_sheet_name = sheet_support.name
-
-      formula_bs = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$Z, 24, 0)"
-      sheet_macro.range(f"BS3:BS{last_row}").formula = formula_bs
-
-      formula_bt = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$Z, 15, 0)"
-      bt_range = sheet_macro.range(f"BT3:BT{last_row}")
-      bt_range.formula = formula_bt
-      bt_range.number_format = '"$"#,##0.00'
-
-    wb_support.close()
-
-  def handle_mccormick_kraft_nestle(self, excel_app, wb_macro, file_path):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-
-    sheet_macro.range("BU2").value = "Kraft"
-    sheet_macro.range("BV2").value = "Nestle"
-    sheet_macro.range("BW2").value = "McCormick"
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-
-      formula_kraft = f"=VLOOKUP(A3, '[{support_name}]Kraft'!$A:$B, 1, 0)"
-      sheet_macro.range(f"BU3:BU{last_row}").formula = formula_kraft
-
-      formula_nestle = f"=VLOOKUP(A3, '[{support_name}]Nestle'!$A:$B, 1, 0)"
-      sheet_macro.range(f"BV3:BV{last_row}").formula = formula_nestle
-
-      formula_mccormick = f"=VLOOKUP(A3, '[{support_name}]McCormick'!$A:$B, 1, 0)"
-      sheet_macro.range(f"BW3:BW{last_row}").formula = formula_mccormick
-
-    wb_support.close()
-
-  def handle_hq(self, excel_app, wb_macro, file_path):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-    sheet_support = wb_support.sheets[0]
-
-    sheet_macro.range("BY2").value = "HQ"
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-      support_sheet_name = sheet_support.name
-      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$B:$I, 6, 0)"
-      sheet_macro.range(f"BY3:BY{last_row}").formula = formula
-
-    wb_support.close()
-
-  def handle_tgp_ps_report(self, excel_app, wb_macro, file_path):
-    wb_support = excel_app.books.open(file_path)
-    sheet_macro = wb_macro.sheets["Sheet1"]
-    sheet_support = wb_support.sheets[0]
-
-    sheet_macro.range("BZ2").value = "HO"
-    last_row = sheet_macro.range(
-        "A" + str(sheet_macro.cells.last_cell.row)
-    ).end("up").row
-
-    if last_row >= 3:
-      support_name = os.path.basename(file_path)
-      support_sheet_name = sheet_support.name
-      formula = f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$Z, 4, 0)"
-      sheet_macro.range(f"BZ3:BZ{last_row}").formula = formula
-
-    wb_support.close()
-
-
-if __name__ == "__main__":
-  app = MarketingMacroApp()
-  app.mainloop()

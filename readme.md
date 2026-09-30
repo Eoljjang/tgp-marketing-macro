@@ -11,3 +11,7 @@
 5. BU, BV, BW comes from Mccormick, Kraft, Nestle file.
 6. BX is an empty column. 
 7. BY and BZ come from HQ file. 
+
+# Usage: 
+- In production, simply download the latest release and run the .exe.
+- In development, `python main.py` to start the program.
