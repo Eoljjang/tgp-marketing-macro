@@ -15,3 +15,5 @@
 # Usage: 
 - In production, simply download the latest release and run the .exe.
 - In development, `python main.py` to start the program.
+- When you first install program, make sure you make it unblocked under properties.
+![guide](./guide.png)
