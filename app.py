@@ -20,7 +20,7 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     self.TkdndVersion = TkinterDnD._require(self)
 
     # Window Configuration
-    self.title("Work in progress")
+    self.title("Marketing Macro Generator")
     self.geometry("750x1050")
     self.resizable(False, False)
 
@@ -45,7 +45,7 @@ class MarketingMacroApp(ctk.CTk, TkinterDnD.DnDWrapper):
     # Main Title Label
     title_label = ctk.CTkLabel(
         self,
-        text="Work in Progress",
+        text="Marketing Macro Generator",
         font=ctk.CTkFont(size=24, weight="bold"),
     )
     title_label.pack(pady=(20, 10))
