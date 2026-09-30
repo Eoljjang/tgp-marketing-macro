@@ -1,4 +1,4 @@
 customtkinter==5.2.2
 xlwings==0.33.0
 pyinstaller==6.11.0
-tkinterdnd2==0.3.3
+tkinterdnd2
