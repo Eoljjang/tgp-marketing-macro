@@ -42,7 +42,7 @@ class MarketingMacroProcessor:
       support_name = os.path.basename(file_path)
       support_sheet_name = sheet_support.name
       formula = (
-          f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
+          f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$E, 5, 0)"
       )
       sheet_macro.range(f"BQ3:BQ{last_row}").formula = formula
 
@@ -63,7 +63,7 @@ class MarketingMacroProcessor:
       support_name = os.path.basename(file_path)
       support_sheet_name = sheet_support.name
       formula = (
-          f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$B, 1, 0)"
+          f"=VLOOKUP(A3, '[{support_name}]{support_sheet_name}'!$A:$E, 5, 0)"
       )
       sheet_macro.range(f"BR3:BR{last_row}").formula = formula
 
